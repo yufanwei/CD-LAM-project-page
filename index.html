@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CD-LAM: Causally Debiased Latent Action Model for Embodied Action Conditioned World Models</title>
+<meta name="description" content="CD-LAM is a LAM-side causal debiasing method for continuous latent actions (Aether AI × UC San Diego): debiased action conditions for embodied world models. −35% FDCE, +1 dB PSNR, 12× cheaper robot-action training.">
+<style>
+  :root{
+    --navy:#0b1330; --navy2:#13204a; --ink:#182140; --sub:#5b6685;
+    --line:#e6e9f4; --bg:#ffffff; --soft:#f5f7fd;
+    --blue:#2f5ce0; --blue-soft:#e9efff; --teal:#17a689; --amber:#ef9a2d; --violet:#7c4fe0;
+    --maxw:1080px; --rad:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+       color:var(--ink); background:var(--bg); line-height:1.65; font-size:16.5px; overflow-x:hidden;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px;}
+  a{color:var(--blue);}
+  nav{position:sticky; top:0; z-index:50; background:rgba(11,19,48,.78); backdrop-filter:blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.08); transition:box-shadow .25s ease;}
+  nav.scrolled{box-shadow:0 8px 30px rgba(11,19,48,.35);}
+  .nav-in{max-width:var(--maxw); margin:0 auto; padding:0 24px; height:58px;
+          display:flex; align-items:center; justify-content:space-between;}
+  .logo{font-weight:800; font-size:18px; color:#fff; text-decoration:none; letter-spacing:.02em; display:flex; align-items:center; gap:10px;}
+  .logo span.grad{background:linear-gradient(90deg,#8fd8c9,#9db8ff); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .logo .org{font-size:11px; font-weight:700; letter-spacing:.1em; color:#7e8cba; text-transform:uppercase;
+             border-left:1px solid rgba(255,255,255,.2); padding-left:10px;}
+  .nav-links{display:flex; gap:22px; align-items:center;}
+  .nav-links a{color:#c6d2f2; text-decoration:none; font-size:14.5px; font-weight:600; position:relative;}
+  .nav-links a:not(.cta)::after{content:""; position:absolute; left:0; bottom:-4px; width:0; height:2px;
+      background:linear-gradient(90deg,#8fd8c9,#9db8ff); transition:width .25s ease; border-radius:2px;}
+  .nav-links a:not(.cta):hover::after{width:100%;}
+  .nav-links a:hover{color:#fff;}
+  .nav-links a.cta{background:#eaf0ff; color:var(--navy); padding:7px 16px; border-radius:999px; transition:transform .15s ease;}
+  .nav-links a.cta:hover{transform:translateY(-2px);}
+  @media(max-width:760px){.nav-links a:not(.cta){display:none;} .logo .org{display:none;}}
+  .hero{position:relative; overflow:hidden; color:#eaf0ff; padding:74px 0 150px; text-align:center;
+        background:linear-gradient(160deg,#182a63 0%, var(--navy2) 40%, var(--navy) 100%);}
+  .blob{position:absolute; border-radius:50%; filter:blur(70px); opacity:.5; pointer-events:none;}
+  .blob.b1{width:420px; height:420px; background:#3a63e8; top:-140px; left:-120px; animation:drift 16s ease-in-out infinite alternate;}
+  .blob.b2{width:360px; height:360px; background:#17a689; top:-60px; right:-110px; animation:drift 19s ease-in-out infinite alternate-reverse;}
+  .blob.b3{width:300px; height:300px; background:#7c4fe0; bottom:-160px; left:38%; animation:drift 22s ease-in-out infinite alternate;}
+  @keyframes drift{from{transform:translate(0,0) scale(1);} to{transform:translate(60px,40px) scale(1.15);}}
+  .hero .wrap{position:relative; z-index:2;}
+  .hero .eyebrow{display:inline-block; font-size:12.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+        color:#9db8ff; border:1px solid rgba(157,184,255,.4); border-radius:999px; padding:5px 16px;
+        background:rgba(157,184,255,.1);}
+  .hero h1{font-size:clamp(26px,4.2vw,44px); font-weight:800; letter-spacing:-.018em; line-height:1.18;
+           max-width:940px; margin:20px auto 0;}
+  .hero h1 em{font-style:normal; background:linear-gradient(90deg,#9db8ff,#8fd8c9,#ffd28f,#9db8ff);
+              background-size:300% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+              animation:shimmer 7s linear infinite;}
+  @keyframes shimmer{to{background-position:300% 0;}}
+  .hero .sub{max-width:780px; margin:16px auto 0; font-size:clamp(15px,2vw,17.5px); color:#bdc9ec; line-height:1.7;}
+  .authors{max-width:860px; margin:26px auto 0; font-size:15.5px; line-height:1.9; color:#dbe4fb;}
+  .authors span{white-space:nowrap;}
+  .authors sup{color:#8fa5d9; font-size:.7em;}
+  .affil{margin-top:8px; font-size:14.5px; color:#a9b7e2; font-weight:600;}
+  .notes{margin-top:4px; font-size:12.5px; color:#7e8cba;}
+  .hero .btns{margin-top:28px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;}
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:11px 24px; border-radius:999px; font-size:15px;
+       font-weight:650; text-decoration:none; transition:transform .15s ease, box-shadow .15s ease;}
+  .btn:hover{transform:translateY(-3px);}
+  .btn.light{background:#eaf0ff; color:var(--navy); box-shadow:0 6px 24px rgba(234,240,255,.25);}
+  .btn.light:hover{box-shadow:0 12px 34px rgba(234,240,255,.35);}
+  .btn.ghost{border:1.5px solid rgba(234,240,255,.4); color:#dbe4fb;}
+  .btn.ghost .tag{font-size:10.5px; font-weight:800; letter-spacing:.06em; background:rgba(157,184,255,.2);
+                  border-radius:5px; padding:2px 7px; color:#9db8ff;}
+  .hero-stats{max-width:860px; margin:36px auto 0; display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  .hstat{background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.13); border-radius:14px; padding:14px 10px;
+         transition:transform .2s ease, background .2s ease;}
+  .hstat:hover{transform:translateY(-3px); background:rgba(255,255,255,.09);}
+  .hstat .n{font-size:22px; font-weight:800; color:#8fd8c9; letter-spacing:-.01em; white-space:nowrap;}
+  .hstat .l{margin-top:2px; font-size:12px; color:#a9b7e2; line-height:1.4;}
+  @media(max-width:760px){.hero-stats{grid-template-columns:repeat(2,1fr);}}
+  .hero .eyebrow,.hero h1,.hero .sub,.hero .authors,.hero .affil,.hero .notes,.hero .btns,.hero .hero-stats{
+      opacity:0; animation:rise .8s cubic-bezier(.2,.7,.3,1) forwards;}
+  .hero h1{animation-delay:.07s;} .hero .sub{animation-delay:.14s;}
+  .hero .authors{animation-delay:.21s;} .hero .affil{animation-delay:.24s;} .hero .notes{animation-delay:.27s;}
+  .hero .btns{animation-delay:.34s;} .hero .hero-stats{animation-delay:.44s;}
+  @keyframes rise{from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:translateY(0);}}
+  .float-card{max-width:var(--maxw); margin:-104px auto 0; padding:0 24px; position:relative; z-index:5;}
+  .float-card .inner{background:#fff; border-radius:var(--rad); box-shadow:0 24px 70px rgba(11,19,48,.2);
+        border:1px solid var(--line); padding:16px; transition:transform .3s ease, box-shadow .3s ease;}
+  .float-card .inner:hover{transform:translateY(-6px); box-shadow:0 34px 90px rgba(11,19,48,.26);}
+  .float-card img{width:100%; height:auto; display:block; border-radius:10px;}
+  .float-card figcaption{padding:12px 8px 4px; font-size:13.5px; color:var(--sub); line-height:1.55;}
+  .float-card figcaption b{color:var(--ink);}
+  section{padding:76px 0 26px;}
+  .eyebrow2{font-size:12.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin-bottom:10px;}
+  h2{font-size:clamp(24px,3.4vw,34px); font-weight:800; letter-spacing:-.015em; line-height:1.2; margin-bottom:14px;}
+  .lead{font-size:17px; color:var(--sub); max-width:840px; margin-bottom:10px;}
+  .lead b{color:var(--ink);}
+  figure.plate{margin-top:26px; background:#fff; border:1px solid var(--line); border-radius:var(--rad);
+        padding:14px; box-shadow:0 10px 30px rgba(11,19,48,.06); transition:transform .3s ease, box-shadow .3s ease;}
+  figure.plate:hover{transform:translateY(-4px); box-shadow:0 18px 44px rgba(11,19,48,.1);}
+  figure.plate img{width:100%; height:auto; display:block; border-radius:9px;}
+  figure.plate figcaption{padding:12px 8px 2px; font-size:13.5px; color:var(--sub); line-height:1.55;}
+  figure.plate figcaption b{color:var(--ink);}
+  .reveal{opacity:0; transform:translateY(28px); transition:opacity .7s cubic-bezier(.2,.7,.3,1), transform .7s cubic-bezier(.2,.7,.3,1);}
+  .reveal.in{opacity:1; transform:translateY(0);}
+  .reveal.d1{transition-delay:.08s;} .reveal.d2{transition-delay:.16s;} .reveal.d3{transition-delay:.24s;}
+  .cmp{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px;}
+  .cmp .card{border-radius:var(--rad); padding:24px 22px; border:1px solid var(--line); position:relative; overflow:hidden;
+             transition:transform .25s ease, box-shadow .25s ease;}
+  .cmp .card:hover{transform:translateY(-5px); box-shadow:0 16px 38px rgba(11,19,48,.1);}
+  .cmp .bad{background:linear-gradient(180deg,#fff5f4,#fff);}
+  .cmp .good{background:linear-gradient(180deg,#effaf6,#fff);}
+  .cmp .who{display:inline-block; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+            border-radius:6px; padding:3px 10px; margin-bottom:12px;}
+  .cmp .bad .who{background:#ffe3e0; color:#c2372b;}
+  .cmp .good .who{background:#d9f3e9; color:#0d8265;}
+  .cmp h3{font-size:18px; font-weight:750; margin-bottom:8px;}
+  .cmp p{font-size:14.5px; color:var(--sub); line-height:1.65;}
+  .cmp ul{margin:10px 0 0 18px; font-size:14px; color:var(--sub); line-height:1.7;}
+  @media(max-width:820px){.cmp{grid-template-columns:1fr;}}
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px;}
+  .step{background:var(--soft); border:1px solid var(--line); border-radius:var(--rad); padding:22px 20px;
+        position:relative; overflow:hidden; transition:transform .25s ease, box-shadow .25s ease;}
+  .step::before{content:""; position:absolute; top:0; left:0; right:0; height:4px;}
+  .step:nth-child(1)::before{background:linear-gradient(90deg,var(--blue),#7fa2ff);}
+  .step:nth-child(2)::before{background:linear-gradient(90deg,var(--teal),#7fdcc6);}
+  .step:nth-child(3)::before{background:linear-gradient(90deg,var(--amber),#ffc97f);}
+  .step:hover{transform:translateY(-6px); box-shadow:0 16px 36px rgba(11,19,48,.1);}
+  .step .num{width:34px; height:34px; border-radius:10px; color:#fff; font-weight:800;
+             display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:14px;}
+  .step:nth-child(1) .num{background:var(--blue);} .step:nth-child(2) .num{background:var(--teal);} .step:nth-child(3) .num{background:var(--amber);}
+  .step h3{font-size:17px; font-weight:750; margin-bottom:8px;}
+  .step p{font-size:14.5px; color:var(--sub); line-height:1.6;}
+  .step .mini{display:inline-block; margin-top:12px; font-size:12px; font-weight:700; border-radius:6px; padding:2px 9px;}
+  .step:nth-child(1) .mini{color:var(--blue); background:var(--blue-soft);}
+  .step:nth-child(2) .mini{color:var(--teal); background:#e5f7f2;}
+  .step:nth-child(3) .mini{color:#c07514; background:#fdf1e0;}
+  @media(max-width:820px){.steps{grid-template-columns:1fr;}}
+  .video-slot{position:relative; border-radius:var(--rad); overflow:hidden; aspect-ratio:16/9; margin-top:26px;
+      background:linear-gradient(135deg,#13204a,#0b1330 60%,#132a45); border:1px solid rgba(255,255,255,.08);
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:#c6d2f2;}
+  .video-slot::before{content:""; position:absolute; inset:0;
+      background-image:radial-gradient(rgba(157,184,255,.14) 1px, transparent 1px); background-size:26px 26px;}
+  .video-slot .play{width:74px; height:74px; border-radius:50%; background:rgba(234,240,255,.1);
+      border:2px solid rgba(234,240,255,.5); display:flex; align-items:center; justify-content:center;
+      position:relative; z-index:2; animation:pulse 2.4s ease-in-out infinite;}
+  .video-slot .play::after{content:""; margin-left:6px; border-style:solid; border-width:13px 0 13px 22px;
+      border-color:transparent transparent transparent #eaf0ff;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(157,184,255,.35);} 50%{box-shadow:0 0 0 18px rgba(157,184,255,0);}}
+  .video-slot .vtitle{position:relative; z-index:2; font-size:16.5px; font-weight:700; color:#eaf0ff;}
+  .video-slot .vsub{position:relative; z-index:2; font-size:13px; color:#8fa5d9; letter-spacing:.08em; text-transform:uppercase; font-weight:700;}
+  .video-slot.small{aspect-ratio:16/10;}
+  .vgrid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .vgrid .video-slot{margin-top:0;}
+  @media(max-width:820px){.vgrid{grid-template-columns:1fr;}}
+  .vnote{margin-top:12px; font-size:13px; color:var(--sub); text-align:center;}
+  .band{background:linear-gradient(180deg,#f2f6ff 0%, #eefaf5 100%); padding:70px 0 64px; margin-top:64px;
+        border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:30px;}
+  .stat{background:#fff; border:1px solid var(--line); border-radius:var(--rad); padding:24px 18px; text-align:center;
+        box-shadow:0 8px 26px rgba(11,19,48,.06); transition:transform .25s ease, box-shadow .25s ease;}
+  .stat:hover{transform:translateY(-5px); box-shadow:0 16px 38px rgba(11,19,48,.1);}
+  .stat .num{font-size:29px; font-weight:800; letter-spacing:-.02em; white-space:nowrap;}
+  .stat:nth-child(1) .num{color:var(--blue);} .stat:nth-child(2) .num{color:var(--teal);}
+  .stat:nth-child(3) .num{color:var(--violet);} .stat:nth-child(4) .num{color:var(--amber);}
+  .stat .lbl{margin-top:6px; font-size:13px; color:var(--sub); line-height:1.45;}
+  @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr);} .stat .num{font-size:24px;}}
+  .tbl{width:100%; border-collapse:collapse; margin-top:26px; background:#fff; border-radius:var(--rad);
+       overflow:hidden; box-shadow:0 10px 30px rgba(11,19,48,.06); border:1px solid var(--line); font-size:15px;}
+  .tbl th{background:var(--navy); color:#eaf0ff; text-align:left; padding:12px 18px; font-size:13.5px;
+          letter-spacing:.04em; text-transform:uppercase;}
+  .tbl td{padding:12px 18px; border-top:1px solid var(--line); color:var(--sub);}
+  .tbl td:first-child{font-weight:650; color:var(--ink);}
+  .tbl tr.ours{background:linear-gradient(90deg,#eef7ff,#effaf5);}
+  .tbl tr.ours td{color:var(--ink); font-weight:650;}
+  .tbl tr.ours td .up{color:var(--teal); font-size:12.5px; font-weight:800; margin-left:8px;}
+  .tbl-note{margin-top:10px; font-size:13px; color:var(--sub);}
+  pre{background:#0d1430; color:#dfe6fa; border-radius:var(--rad); padding:20px 22px; overflow-x:auto;
+      font-size:13px; line-height:1.6; font-family:Consolas,"SF Mono",Menlo,monospace; margin-top:14px;}
+  .copybtn{font-size:13.5px; font-weight:650; border:1px solid var(--line); background:var(--soft);
+           border-radius:8px; padding:6px 14px; cursor:pointer; transition:background .15s ease, transform .15s ease;}
+  .copybtn:hover{background:var(--blue-soft); transform:translateY(-1px);}
+  footer{background:var(--navy); color:#8fa5d9; margin-top:80px; padding:38px 0 44px; font-size:14px; text-align:center;}
+  footer .fbrand{font-size:17px; font-weight:800; color:#eaf0ff; margin-bottom:6px;}
+  footer .fbrand span{background:linear-gradient(90deg,#8fd8c9,#9db8ff); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  footer a{color:#c6d2f2;}
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none !important; transition:none !important;}
+    .reveal{opacity:1; transform:none;}
+    .hero .eyebrow,.hero h1,.hero .sub,.hero .authors,.hero .affil,.hero .notes,.hero .btns,.hero .hero-stats{opacity:1;}
+  }
+  /* ---------- rollout gallery ---------- */
+  .gal-block{margin-top:30px; background:#fff; border:1px solid var(--line); border-radius:var(--rad);
+             padding:20px 20px 16px; box-shadow:0 10px 30px rgba(11,19,48,.06);}
+  .gal-head{display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;}
+  .gal-title{font-size:18.5px; font-weight:750;}
+  .gal-title .do{font-family:Consolas,"SF Mono",Menlo,monospace; font-size:13px; font-weight:600;
+                 background:var(--blue-soft); color:var(--blue); padding:2px 9px; border-radius:6px; margin-left:8px; white-space:nowrap;}
+  .gal-exp{margin-top:8px; font-size:14px; color:var(--sub); line-height:1.6; max-width:860px;}
+  .gal-exp b{color:var(--ink);}
+  .seg{display:inline-flex; background:var(--soft); border:1px solid var(--line); border-radius:999px; padding:3px; flex:none;}
+  .seg button{border:0; background:transparent; padding:5px 15px; border-radius:999px; font-weight:700;
+              font-size:13.5px; color:var(--sub); cursor:pointer; transition:background .15s ease,color .15s ease;}
+  .seg button.on{background:var(--navy); color:#fff;}
+  .gal-toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px;}
+  .gal-toolbar .lbl{font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--sub); margin-right:2px;}
+  .chip{border:1px solid var(--line); background:#fff; border-radius:8px; padding:4px 11px; font-size:13px;
+        font-weight:650; color:var(--sub); cursor:pointer; transition:all .15s ease;}
+  .chip:hover{border-color:var(--blue); color:var(--blue);}
+  .chip.on{background:var(--blue); border-color:var(--blue); color:#fff;}
+  .chip.ghost{border-style:dashed; color:var(--blue); background:var(--blue-soft); border-color:transparent;}
+  .gal-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px;}
+  .gal-grid.four{grid-template-columns:repeat(4,1fr);}
+  .tile{position:relative; border-radius:10px; overflow:hidden; background:#0b1330;}
+  .tile video{width:100%; display:block; aspect-ratio:4/3; object-fit:cover; background:#0b1330;}
+  .tile .tag{position:absolute; top:8px; left:8px; font-size:10.5px; font-weight:800; letter-spacing:.05em;
+             text-transform:uppercase; padding:3px 8px; border-radius:6px; color:#fff; line-height:1.35; max-width:88%;}
+  .tag.ref{background:rgba(11,19,48,.78);} .tag.ours{background:rgba(13,130,101,.88);}
+  .tag.base{background:rgba(194,55,43,.82);} .tag.don{background:rgba(124,79,224,.88);}
+  .tile .fd{position:absolute; bottom:8px; right:8px; font-size:11.5px; font-weight:750;
+            background:rgba(255,255,255,.9); border-radius:6px; padding:2px 8px; color:var(--ink);}
+  .tile .fd.good{color:#0d8265;} .tile .fd.bad{color:#c2372b;}
+  .gal-foot{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-top:12px;}
+  .gal-note{font-size:13px; color:var(--sub); line-height:1.55; flex:1 1 380px;}
+  .gal-note b{color:var(--ink);}
+  .gal-ctrl{display:flex; gap:8px; flex:none;}
+  .pbtn{border:1px solid var(--line); background:var(--soft); border-radius:8px; padding:5px 13px;
+        font-size:13px; font-weight:700; color:var(--ink); cursor:pointer; transition:background .15s ease;}
+  .pbtn:hover{background:var(--blue-soft);}
+  @media(max-width:820px){
+    .gal-grid,.gal-grid.four{grid-template-columns:1fr 1fr;}
+    .gal-head{flex-direction:column; align-items:flex-start;}
+  }
+  @media(max-width:520px){.gal-grid,.gal-grid.four{grid-template-columns:1fr;}}
+  /* ---------- motion pass ---------- */
+  .hero-bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.16;
+           filter:saturate(.8) contrast(1.06); pointer-events:none;}
+  .montage{width:100%; border-radius:16px; margin-top:26px; display:block; background:#0b1330;
+           box-shadow:0 18px 50px rgba(11,19,48,.3);}
+  /* live mini-demo tiles reuse .gal-grid/.tile */
+  .plate .gal-grid{margin-top:0;}
+  /* ---------- causal DAG ---------- */
+  .dag-wrap{margin-top:26px;}
+  .dag-head{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:2px 6px 10px;}
+  .dag-head .t{font-size:15.5px; font-weight:750;}
+  .dag-svg{width:100%; height:auto; display:block;}
+  .dag-svg text{font-family:inherit;}
+  .nbox{rx:12; stroke-width:1.5;}
+  .nbox.ctx{fill:#fff2f0; stroke:#e8b3ac;}
+  .nbox.act{fill:#e9f8f2; stroke:#9fd8c5;}
+  .nbox.out{fill:#f5f7fd; stroke:#ccd4ea;}
+  .nz{fill:#fdeeec; stroke:#c2372b; stroke-width:2; transition:fill .7s ease, stroke .7s ease;}
+  .dag.clean .nz{fill:#e5f7f2; stroke:#0d8265;}
+  .edge{fill:none; stroke-width:3; stroke-dasharray:10 7; animation:dagflow 1.05s linear infinite;}
+  .edge.a{stroke:#17a689;}
+  .edge.y{stroke:#2f5ce0; animation-duration:.9s;}
+  .edge.c{stroke:#d84b3c; transition:opacity .7s ease;}
+  .dag.clean .edge.c{opacity:.15; animation-play-state:paused;}
+  @keyframes dagflow{to{stroke-dashoffset:-17;}}
+  .cutg{opacity:0; transform:scale(.4); transform-origin:415px 96px; transition:opacity .5s ease .25s, transform .5s cubic-bezier(.2,.7,.3,1.4) .25s;}
+  .dag.clean .cutg{opacity:1; transform:scale(1);}
+  .swap-b,.swap-c{transition:opacity .55s ease;}
+  .dag .swap-c{opacity:0;} .dag .swap-b{opacity:1;}
+  .dag.clean .swap-c{opacity:1;} .dag.clean .swap-b{opacity:0;}
+  .dag-cap{padding:10px 8px 2px; font-size:13.5px; color:var(--sub); line-height:1.55;}
+  .dag-cap b{color:var(--ink);}
+  /* ---------- FDCE bar duel ---------- */
+  .duel{margin-top:30px; background:#fff; border:1px solid var(--line); border-radius:var(--rad);
+        padding:22px 22px 18px; box-shadow:0 10px 30px rgba(11,19,48,.06);}
+  .duel h3{font-size:16.5px; font-weight:750;}
+  .duel h3 span{font-weight:600; color:var(--sub); font-size:13.5px; margin-left:8px;}
+  .dgroup{margin-top:16px;}
+  .dgroup .gh{font-size:12px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--sub);}
+  .drow{display:grid; grid-template-columns:44px 1fr 74px; gap:12px; align-items:center; margin-top:10px;}
+  .drow .dl{font-size:13.5px; font-weight:750; color:var(--ink); text-align:right;}
+  .dbars{display:flex; flex-direction:column; gap:5px;}
+  .dbar{position:relative; height:26px; border-radius:7px; width:24px; transition:width 1.15s cubic-bezier(.2,.7,.25,1);
+        display:flex; align-items:center; overflow:hidden; white-space:nowrap;}
+  .dbar i{font-style:normal; font-size:11.5px; font-weight:800; letter-spacing:.03em; color:#fff; margin-left:10px; text-transform:uppercase;}
+  .dbar b{font-size:12.5px; color:#fff; margin-left:8px;}
+  .dbar.base{background:linear-gradient(90deg,#d84b3c,#c2372b);}
+  .dbar.ours{background:linear-gradient(90deg,#17a689,#0d8265);}
+  .duel.in .dbar{width:var(--w);}
+  .drow .dtag{font-size:13.5px; font-weight:800; color:#0d8265; background:#d9f3e9; border-radius:8px;
+              padding:4px 8px; text-align:center; opacity:0; transform:scale(.6); transition:opacity .4s ease 1s, transform .45s cubic-bezier(.2,.7,.3,1.5) 1s;}
+  .duel.in .dtag{opacity:1; transform:scale(1);}
+  .duel .fine{margin-top:14px; font-size:12.5px; color:var(--sub);}
+  @media(max-width:640px){.drow{grid-template-columns:34px 1fr 60px;} .dbar i{display:none;}}
+  @media (prefers-reduced-motion: reduce){
+    .hero-bg{display:none;}
+    .edge{animation:none;}
+    .dbar{transition:none; width:var(--w);}
+    .drow .dtag{transition:none; opacity:1; transform:none;}
+  }
+
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="nav-in">
+    <a class="logo" href="#top">CD-<span class="grad">LAM</span> <span class="org">Aether AI</span></a>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#approach">Approach</a>
+      <a href="#video">Video</a>
+      <a href="#results">Results</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#cite">Cite</a>
+      <a class="cta" href="static/paper/CD-LAM.pdf" target="_blank" rel="noopener">Paper</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <video class="hero-bg autovid" muted loop playsinline preload="none" data-src="static/videos/montage/hero_wall_v2.mp4" aria-hidden="true"></video>
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="wrap">
+    <div class="eyebrow">Aether AI &times; UC San Diego &middot; Embodied World Models</div>
+    <h1>CD-LAM: <em>Causally Debiased</em> Latent Action Model for Embodied Action Conditioned World Models</h1>
+    <p class="sub">A LAM-side <b>causal debiasing</b> method for continuous latent actions &mdash; it debiases the latent action
+       space before world-model training, so the action condition carries embodiment motion instead of background shortcuts,
+       with the downstream conditioning format unchanged.</p>
+    <div class="authors">
+      <span>Yufan Wei<sup>1,2*</sup>,</span> <span>Kun Zhou<sup>1&dagger;</sup>,</span> <span>Lingjun Mao<sup>1,2*</sup>,</span>
+      <span>Zijun Zhang<sup>1</sup>,</span> <span>Ziming Xu<sup>1</sup>,</span> <span>Ziqiao Xi<sup>1</sup>,</span>
+      <span>Shuang Liang<sup>1,2*</sup>,</span> <span>Ruobing Han<sup>1</sup>,</span> <span>Yuchen Yan<sup>1</sup>,</span>
+      <span>Xinyue Wang<sup>1,2*</sup>,</span> <span>Fan Feng<sup>1</sup>,</span> <span>Biwei Huang<sup>1</sup></span>
+    </div>
+    <div class="affil"><sup>1</sup>Aether AI &nbsp;&middot;&nbsp; <sup>2</sup>University of California, San Diego</div>
+    <div class="notes"><sup>*</sup>Done during an internship at Aether AI. &nbsp;&nbsp; <sup>&dagger;</sup>Project Lead &amp; Corresponding author: <a href="mailto:franciskunzhou@gmail.com" style="color:#9db8ff; text-decoration:none;">franciskunzhou@gmail.com</a></div>
+    <div class="btns">
+      <a class="btn light" href="static/paper/CD-LAM.pdf" target="_blank" rel="noopener">&#128196; Paper</a>
+      <span class="btn ghost">arXiv <span class="tag">SOON</span></span>
+      <a class="btn ghost" href="https://github.com/yufanwei/CD-LAM" target="_blank" rel="noopener">Code &#8599;</a>
+      <a class="btn ghost" href="https://huggingface.co/yufanwei/CD-LAM" target="_blank" rel="noopener">&#129303; Model &#8599;</a>
+      <a class="btn ghost" href="#cite">BibTeX</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat"><div class="n">&minus;<span class="cnt" data-count="35">0</span>%</div><div class="l">action-following error (FDCE)</div></div>
+      <div class="hstat"><div class="n">+<span class="cnt" data-count="1.0" data-dec="1">0</span> dB</div><div class="l">PSNR over DreamDojo</div></div>
+      <div class="hstat"><div class="n"><span class="cnt" data-count="12">0</span>&times;</div><div class="l">fewer robot-action training updates</div></div>
+      <div class="hstat"><div class="n"><span class="cnt" data-count="1">0</span> h</div><div class="l">of debiasing data is enough</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="float-card">
+  <figure class="inner">
+    <img src="static/images/method.png" alt="CD-LAM pipeline: Stage 1 LAM debiased fine-tuning, Stage 2 ACWM debiased fine-tuning, Stage 3 robot action based training.">
+    <figcaption><b>The CD-LAM pipeline.</b> Stage&nbsp;1 (<b>LAM debiased fine-tuning</b>) suppresses action-irrelevant confounders inside the
+      latent action model; Stage&nbsp;2 (<b>ACWM debiased fine-tuning</b>) trains the world model on the debiased latents; Stage&nbsp;3
+      (<b>robot action based training</b>) aligns executable robot actions to the already-debiased space &mdash; the conditioning
+      interface stays unchanged.</figcaption>
+  </figure>
+</div>
+
+<main>
+
+  <section id="problem" class="wrap">
+    <div class="eyebrow2 reveal">The Problem</div>
+    <h2 class="reveal">Latent actions are confounded &mdash; and world models inherit it</h2>
+    <p class="lead reveal d1">Latent action models (LAMs) let world models learn control from ordinary, action-unlabeled video.
+      But trained only to reconstruct the next frame, a LAM encodes <b>whatever is predictive</b> &mdash; embodiment motion, and also
+      background motion, camera shake, and scene appearance. The world model then receives those confounders
+      <b>as part of its action condition</b>: rollouts stay visually plausible while control quietly fails.</p>
+    <figure class="plate reveal dag-wrap">
+      <div class="dag-head">
+        <div class="t">The causal picture: one path must go</div>
+        <div class="seg" id="dagseg">
+          <button class="on" data-s="base">Reconstruction LAM</button>
+          <button data-s="clean">CD-LAM (debiased)</button>
+        </div>
+      </div>
+      <div class="dag" id="dag">
+        <svg class="dag-svg" viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg" role="img"
+             aria-label="Causal graph: action-irrelevant confounders C and embodiment motion A both feed the latent action z, which conditions the ACWM; CD-LAM cuts the C-to-z path.">
+          <defs>
+            <marker id="arrC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#d84b3c"/>
+            </marker>
+            <marker id="arrA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#17a689"/>
+            </marker>
+            <marker id="arrY" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#2f5ce0"/>
+            </marker>
+          </defs>
+          <!-- edges -->
+          <path class="edge c" d="M295,72 C 390,72 445,110 487,140" marker-end="url(#arrC)"/>
+          <path class="edge a" d="M295,258 C 390,258 445,220 487,190" marker-end="url(#arrA)"/>
+          <path class="edge y" d="M572,165 L 668,165" marker-end="url(#arrY)"/>
+          <text x="620" y="150" text-anchor="middle" font-size="12" font-style="italic" fill="#2f5ce0">conditioning</text>
+          <!-- cut scissors on C->z -->
+          <g class="cutg">
+            <line x1="400" y1="120" x2="432" y2="74" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+            <line x1="400" y1="120" x2="432" y2="74" stroke="#c2372b" stroke-width="3" stroke-dasharray="4 5" stroke-linecap="round"/>
+            <text x="438" y="106" font-size="30">&#9986;</text>
+          </g>
+          <!-- context node -->
+          <rect class="nbox ctx" x="45" y="30" width="250" height="84" rx="12"/>
+          <text x="170" y="55" text-anchor="middle" font-size="15.5" font-weight="750" fill="#c2372b">Action-irrelevant</text>
+          <text x="170" y="74" text-anchor="middle" font-size="15.5" font-weight="750" fill="#c2372b">confounders C</text>
+          <text x="170" y="97" text-anchor="middle" font-size="12" fill="#8a5a54">background &#183; object identity &#183; lighting</text>
+          <!-- action node -->
+          <rect class="nbox act" x="45" y="226" width="250" height="66" rx="12"/>
+          <text x="170" y="253" text-anchor="middle" font-size="16.5" font-weight="750" fill="#0d8265">Embodiment motion A</text>
+          <text x="170" y="276" text-anchor="middle" font-size="12.5" fill="#4c7d6f">arm &amp; gripper dynamics</text>
+          <!-- z node -->
+          <circle class="nz" cx="525" cy="165" r="47"/>
+          <text x="525" y="160" text-anchor="middle" font-size="20" font-weight="800" fill="#182140">z</text>
+          <g font-size="12.5" text-anchor="middle">
+            <text class="swap-b" x="525" y="180" fill="#c2372b" font-weight="700">confounded</text>
+            <text class="swap-c" x="525" y="180" fill="#0d8265" font-weight="700">debiased</text>
+          </g>
+          <text x="525" y="238" text-anchor="middle" font-size="13" fill="#5b6685">latent action</text>
+          <!-- Y node -->
+          <rect class="nbox out" x="672" y="122" width="196" height="86" rx="12"/>
+          <text x="770" y="147" text-anchor="middle" font-size="16" font-weight="750" fill="#182140">ACWM</text>
+          <text x="770" y="165" text-anchor="middle" font-size="10.5" fill="#5b6685">action-conditioned world model</text>
+          <g font-size="12.5" text-anchor="middle">
+            <text class="swap-b" x="770" y="192" fill="#c2372b" font-weight="700">rollout confounded</text>
+            <text class="swap-c" x="770" y="192" fill="#0d8265" font-weight="700">rollout follows action</text>
+          </g>
+          <!-- probe chip -->
+          <g font-size="13">
+            <text class="swap-b" x="450" y="318" text-anchor="middle" fill="#8a5a54">
+              context leakage id_ratio 0.527 &#183; action-norm null &#961; 0.711 &#183; held-out track error 20.08 px</text>
+            <text class="swap-c" x="450" y="318" text-anchor="middle" fill="#4c7d6f">
+              context leakage id_ratio 0.047 &#183; action-norm null &#961; 0.115 &#183; held-out track error 11.50 px</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption class="dag-cap"><b>Prediction shortcuts become control failures.</b> A frame pair carries embodiment motion
+        <b>and</b> context. A reconstruction-trained LAM lets context shortcut into the bottleneck (red path), so the world model
+        follows context rather than command. CD-LAM&rsquo;s training pressures make C&rarr;z unprofitable and preserve A&rarr;z&rarr;Y
+        &mdash; toggle above, or watch it cycle.</figcaption>
+    </figure>
+
+    <div class="cmp">
+      <div class="card bad reveal d1">
+        <span class="who">Reconstruction-trained LAM</span>
+        <h3>Confounded action condition</h3>
+        <p>Latents absorb whatever predicts the next frame:</p>
+        <ul>
+          <li>Background &amp; camera motion leak into the latent action</li>
+          <li>Zero action &ne; zero motion &mdash; the scene keeps moving</li>
+          <li>Transferred actions fail to steer new scenes</li>
+        </ul>
+      </div>
+      <div class="card good reveal d2">
+        <span class="who">CD-LAM (ours)</span>
+        <h3>Debiased action condition</h3>
+        <p>Latents face embodiment dynamics; context stays in observations:</p>
+        <ul>
+          <li>Confounding path cut before world-model training</li>
+          <li>Zero action &rArr; motion largely suppressed</li>
+          <li>Same 32-D latent interface &mdash; drop-in for the ACWM</li>
+        </ul>
+      </div>
+    </div>
+    <figure class="plate reveal">
+      <div class="gal-grid">
+        <div class="tile"><video class="autovid" muted loop playsinline preload="none" data-sync="zdemo"
+             data-src="static/videos/zero14b/s016_gt.mp4"></video><span class="tag ref">Original episode &middot; context</span></div>
+        <div class="tile"><video class="autovid" muted loop playsinline preload="none" data-sync="zdemo"
+             data-src="static/videos/zero14b/s016_ours.mp4"></video><span class="tag ours">CD-LAM &middot; do(u=0)</span>
+             <span class="fd good">FDCE 2.5</span></div>
+        <div class="tile"><video class="autovid" muted loop playsinline preload="none" data-sync="zdemo"
+             data-src="static/videos/zero14b/s016_dream.mp4"></video><span class="tag base">DreamDojo &middot; do(u=0)</span>
+             <span class="fd bad">FDCE 28.9</span></div>
+      </div>
+      <figcaption><b>Zero action, nonzero motion &mdash; live.</b> Both models receive a zero action; the left tile is what the episode
+        actually did. DreamDojo hallucinates roughly that motion from visual context alone &mdash; <b>56&times; the residual embodiment
+        motion of CD-LAM</b> (105.5 vs 1.9 px, 14B). <a href="#gallery">More in the rollout gallery &darr;</a></figcaption>
+    </figure>
+  </section>
+
+  <section id="approach" class="wrap">
+    <div class="eyebrow2 reveal">The Approach</div>
+    <h2 class="reveal">Debias the LAM once &mdash; everything downstream gets better</h2>
+    <p class="lead reveal d1">Three objectives &mdash; <b>embodiment-centric reconstruction</b>, <b>action-centric contrastive learning</b>,
+      and <b>latent space calibration</b> &mdash; applied in a lightweight three-stage pipeline, with the downstream
+      conditioning format completely unchanged.</p>
+    <div class="steps">
+      <div class="step reveal d1"><div class="num">1</div><h3>Stage 1 &middot; LAM debiased fine-tuning</h3>
+        <p>A short fine-tune on action-unlabeled video focuses latents on embodiment dynamics, pulls action-consistent transitions
+           together across scenes, and anchors identical frames to a zero-transition reference.</p>
+        <span class="mini">1k steps &middot; unlabeled video</span></div>
+      <div class="step reveal d2"><div class="num">2</div><h3>Stage 2 &middot; ACWM debiased fine-tuning</h3>
+        <p>The action-conditioned world model trains on latent actions extracted by the debiased encoder &mdash; inheriting clean,
+           motion-facing controllability at scale.</p>
+        <span class="mini">same architecture &amp; interface</span></div>
+      <div class="step reveal d3"><div class="num">3</div><h3>Stage 3 &middot; robot action based training</h3>
+        <p>A lightweight action-to-latent mapping aligns executable robot actions to the already-debiased space &mdash;
+           so adaptation to real robot control is fast and cheap.</p>
+        <span class="mini">12&times; fewer updates</span></div>
+    </div>
+  </section>
+
+  <section id="video" class="wrap">
+    <div class="eyebrow2 reveal">Project Video</div>
+    <h2 class="reveal">See CD-LAM in action</h2>
+    <p class="lead reveal d1">A looping highlight reel of side-by-side rollouts &mdash; replay, zero-action intervention, and target-action transfer, labels burned in. A narrated overview is in production.</p>
+    <video class="montage autovid reveal" muted loop playsinline controls preload="none"
+           data-src="static/videos/montage/overview_montage_v2.mp4"></video>
+    <p class="vnote">Auto-looping highlight reel &middot; 8 episodes &middot; sound-free. Full narrated overview coming soon.</p>
+  </section>
+
+  <div class="band" id="results">
+    <div class="wrap">
+      <div class="eyebrow2 reveal">Results</div>
+      <h2 class="reveal">Cleaner actions in, controllable rollouts out</h2>
+      <p class="lead reveal d1">Evaluated against <b>DreamDojo</b> on EgoDex (latent-action rollouts) and AgiBot (robot-action rollouts
+        and interventions), with identical architecture, latent dimension, and conditioning format &mdash; every gain comes from the
+        LAM-side debiasing stage alone.</p>
+      <div class="stats">
+        <div class="stat reveal"><div class="num">&minus;<span class="cnt" data-count="42">0</span>% / &minus;<span class="cnt" data-count="26">0</span>%</div>
+          <div class="lbl">FDCE, latent-action rollouts (2B / 14B)</div></div>
+        <div class="stat reveal d1"><div class="num">&minus;<span class="cnt" data-count="35">0</span>% / &minus;<span class="cnt" data-count="30">0</span>%</div>
+          <div class="lbl">FDCE after robot-action training (2B / 14B)</div></div>
+        <div class="stat reveal d2"><div class="num">+<span class="cnt" data-count="0.75" data-dec="2">0</span> / +<span class="cnt" data-count="1.0" data-dec="1">0</span> dB</div>
+          <div class="lbl">PSNR over DreamDojo (2B / 14B)</div></div>
+        <div class="stat reveal d3"><div class="num"><span class="cnt" data-count="3">0</span>k vs <span class="cnt" data-count="50">0</span>k</div>
+          <div class="lbl">steps to match the baseline's full budget</div></div>
+      </div>
+      <div class="duel reveal">
+        <h3>FDCE, head to head <span>Foreground Displacement Chamfer Error &middot; px, lower is better &middot; robot-action conditioned</span></h3>
+        <div class="dgroup"><div class="gh">Rollouts &middot; replayed actions</div>
+          <div class="drow"><span class="dl">2B</span><div class="dbars">
+            <div class="dbar base" style="--w:100%"><i>DreamDojo</i><b>12.63</b></div>
+            <div class="dbar ours" style="--w:65.2%"><i>CD-LAM</i><b>8.24</b></div>
+          </div><span class="dtag">&minus;34.8%</span></div>
+          <div class="drow"><span class="dl">14B</span><div class="dbars">
+            <div class="dbar base" style="--w:88%"><i>DreamDojo</i><b>11.11</b></div>
+            <div class="dbar ours" style="--w:61.2%"><i>CD-LAM</i><b>7.73</b></div>
+          </div><span class="dtag">&minus;30.4%</span></div>
+        </div>
+        <div class="dgroup"><div class="gh">Residual motion under do(u=0) &middot; should be zero</div>
+          <div class="drow"><span class="dl">2B</span><div class="dbars">
+            <div class="dbar base" style="--w:100%"><i>DreamDojo</i><b>10.71</b></div>
+            <div class="dbar ours" style="--w:47%"><i>CD-LAM</i><b>5.03</b></div>
+          </div><span class="dtag">&minus;53.0%</span></div>
+          <div class="drow"><span class="dl">14B</span><div class="dbars">
+            <div class="dbar base" style="--w:87.4%"><i>DreamDojo</i><b>9.36</b></div>
+            <div class="dbar ours" style="--w:20.4%"><i>CD-LAM</i><b>2.18</b></div>
+          </div><span class="dtag">&minus;76.7%</span></div>
+        </div>
+        <p class="fine">Zero-action rows measure spurious embodiment motion when the command says &ldquo;don&rsquo;t move&rdquo; &mdash;
+          the direct fingerprint of confounding. At 14B, CD-LAM cuts it to less than a quarter.</p>
+      </div>
+      <table class="tbl reveal">
+        <thead><tr><th>Model</th><th>FDCE (px) &darr;</th><th>PSNR (dB) &uarr;</th></tr></thead>
+        <tbody>
+          <tr><td>DreamDojo-2B</td><td>12.63</td><td>19.85</td></tr>
+          <tr class="ours"><td>CD-LAM-2B</td><td>8.24 <span class="up">&minus;34.8%</span></td><td>20.60 <span class="up">+0.75</span></td></tr>
+          <tr><td>DreamDojo-14B</td><td>11.11</td><td>20.01</td></tr>
+          <tr class="ours"><td>CD-LAM-14B</td><td>7.73 <span class="up">&minus;30.4%</span></td><td>21.01 <span class="up">+1.0</span></td></tr>
+        </tbody>
+      </table>
+      <p class="tbl-note reveal">Robot-action conditioned rollouts after robot action based training; lower FDCE = better action following.</p>
+    </div>
+  </div>
+
+  <section id="gallery" class="wrap" style="padding-top:56px;">
+    <div class="eyebrow2 reveal">Rollout Gallery</div>
+    <h2 class="reveal">Watch the debiasing &mdash; synced, side by side</h2>
+    <p class="lead reveal d1">Robot-action conditioned rollouts on AgiBot after Stage&nbsp;3, at 2B and 14B scale.
+      Within each row every tile starts from the <b>same first frame</b> and receives the <b>same commanded actions</b>;
+      playback is synchronized. The left tile is always the <b>reference</b> &mdash; what the commanded actions ask for &mdash;
+      followed by CD-LAM and DreamDojo. FDCE (<b>Foreground Displacement Chamfer Error</b>; px, lower&nbsp;=&nbsp;better action following) compares induced
+      foreground displacement between generated and reference rollouts rather than raw pixel appearance; clips are 4.9&nbsp;s at 10&nbsp;fps.</p>
+    <div class="gal-block reveal" id="g-recon"></div>
+    <div class="gal-block reveal" id="g-zero"></div>
+    <div class="gal-block reveal" id="g-transfer"></div>
+    <div class="gal-block reveal" id="g-latent"></div>
+  </section>
+
+  <section class="wrap" style="padding-top:8px;">
+    <figure class="plate reveal">
+      <img src="static/images/teaser.png" alt="CD-LAM at a glance: better action following, visual fidelity and efficiency than DreamDojo." loading="lazy">
+      <figcaption><b>At a glance.</b> Against DreamDojo at 2B and 14B scale, CD-LAM improves action following (a) and visual fidelity (b)
+        while matching the baseline with a fraction of the robot action based training budget (c). The reason (d): reconstruction-trained LAMs leak
+        action-irrelevant confounders into the action condition &mdash; CD-LAM cuts that path before world-model training.</figcaption>
+    </figure>
+    <figure class="plate reveal">
+      <img src="static/images/qualitative.jpg" alt="Side-by-side rollouts: DreamDojo drifts from the commanded trajectory, CD-LAM tracks it at 2B and 14B." loading="lazy">
+      <figcaption><b>Same start frame, same commanded actions.</b> DreamDojo's arm drifts off the ground-truth trajectory &mdash; and going to
+        14B doesn't fix it. CD-LAM tracks the commanded motion closely at both scales.</figcaption>
+    </figure>
+    <figure class="plate reveal">
+      <img src="static/images/by_action.png" alt="FDCE by action type: CD-LAM beats DreamDojo on all eight action categories; distributions shift toward lower FDCE and higher PSNR." loading="lazy">
+      <figcaption><b>Better on every action type.</b> (a) FDCE drops across all eight categories &mdash; pick, place, push, handover, pour, fold,
+        grasp, release &mdash; at both scales. (b) Rollout distributions shift toward lower FDCE and higher PSNR.</figcaption>
+    </figure>
+    <figure class="plate reveal">
+      <img src="static/images/efficiency.png" alt="Training curves: CD-LAM crosses the DreamDojo full-budget reference within about 2-3k steps and keeps improving." loading="lazy">
+      <figcaption><b>A debiased space is cheap to adapt.</b> CD-LAM crosses DreamDojo's full-budget reference (dashed) with 6&ndash;8%
+        of the robot-action training updates &mdash; and keeps improving beyond it. Even 1&nbsp;hour of debiasing data unlocks most of the gain.</figcaption>
+    </figure>
+  </section>
+
+  <section id="cite" class="wrap">
+    <div class="eyebrow2 reveal">Citation</div>
+    <h2 class="reveal">Cite CD-LAM</h2>
+    <button class="copybtn reveal" onclick="copyBib(this)">Copy BibTeX</button>
+<pre id="bibtext" class="reveal">@article{wei2026cdlam,
+  title   = {Causally Debiased Latent Action Model for Embodied Action Conditioned World Models},
+  author  = {Wei, Yufan and Zhou, Kun and Mao, Lingjun and Zhang, Zijun and Xu, Ziming and Xi, Ziqiao and Liang, Shuang and Han, Ruobing and Yan, Yuchen and Wang, Xinyue and Feng, Fan and Huang, Biwei},
+  journal = {Under review},
+  year    = {2026}
+}</pre>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fbrand">CD-<span>LAM</span></div>
+    A research project by <b>Aether AI</b> &amp; UC San Diego &middot; &copy; 2026 CD-LAM Authors<br>
+    arXiv coming soon &middot; <a href="https://github.com/yufanwei/CD-LAM" target="_blank" rel="noopener">Code</a> &middot; <a href="https://huggingface.co/yufanwei/CD-LAM" target="_blank" rel="noopener">Model</a>
+  </div>
+</footer>
+
+<script>
+function copyBib(btn){
+  navigator.clipboard.writeText(document.getElementById('bibtext').innerText).then(function(){
+    btn.textContent='Copied!'; setTimeout(function(){btn.textContent='Copy BibTeX';},1600);
+  });
+}
+var nav=document.getElementById('nav');
+window.addEventListener('scroll',function(){nav.classList.toggle('scrolled',window.scrollY>10);},{passive:true});
+var io=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.classList.add('in');
+      if(e.target.classList.contains('stat')) e.target.querySelectorAll('.cnt').forEach(animateCount);
+      io.unobserve(e.target);
+    }
+  });
+},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+function animateCount(el){
+  if(el.dataset.done) return; el.dataset.done=1;
+  var target=parseFloat(el.dataset.count), dec=parseInt(el.dataset.dec||0), t0=null, dur=1300;
+  function tick(t){
+    if(!t0) t0=t;
+    var p=Math.min((t-t0)/dur,1), eased=1-Math.pow(1-p,3);
+    el.textContent=(target*eased).toFixed(dec);
+    if(p<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+</script>
+
+<script>
+const MANIFEST={"recon2b":[{"sid":15,"tier":"featured","src":206,"act":207,"f_ours":3.3,"f_dream":14.4,"note":"Clearest of a family of similar episodes (12&ndash;15)."},{"sid":16,"tier":"featured","src":241,"act":242,"f_ours":3.4,"f_dream":4.7,"note":"Scene type not seen in the other picks."},{"sid":8,"tier":"more","src":234,"act":233,"f_ours":2.4,"f_dream":3.4,"note":"Watch the final 2 seconds."},{"sid":11,"tier":"more","src":226,"act":225,"f_ours":2.9,"f_dream":4.7},{"sid":18,"tier":"more","src":122,"act":124,"f_ours":3.5,"f_dream":4.8},{"sid":20,"tier":"more","src":267,"act":268,"f_ours":3.5,"f_dream":5.2,"note":"Subtle motion &mdash; fine-grained following."}],"recon14b":[{"sid":20,"tier":"featured","src":241,"act":242,"f_ours":3.7,"f_dream":4.6},{"sid":19,"tier":"featured","src":170,"act":171,"f_ours":3.7,"f_dream":3.1},{"sid":14,"tier":"featured","src":208,"act":209,"f_ours":3.5,"f_dream":14.8},{"sid":4,"tier":"featured","src":27,"act":29,"f_ours":1.1,"f_dream":0.6},{"sid":6,"tier":"more","src":58,"act":41,"f_ours":2.2,"f_dream":7.3}],"transfer2b":[{"sid":248,"tier":"featured","src":74,"act":75,"f_ours":35.3,"f_dream":45.8},{"sid":247,"tier":"featured","src":78,"act":79,"f_ours":35.0,"f_dream":29.6},{"sid":262,"tier":"featured","src":72,"act":73,"f_ours":39.4,"f_dream":38.5},{"sid":259,"tier":"featured","src":236,"act":239,"f_ours":37.9,"f_dream":24.7},{"sid":249,"tier":"featured","src":64,"act":65,"f_ours":35.3,"f_dream":28.7},{"sid":13,"tier":"featured","src":240,"act":241,"f_ours":4.0,"f_dream":7.5},{"sid":240,"tier":"more","src":62,"act":63,"f_ours":33.6,"f_dream":41.3},{"sid":274,"tier":"more","src":270,"act":267,"f_ours":50.4,"f_dream":11.1},{"sid":275,"tier":"more","src":34,"act":32,"f_ours":50.5,"f_dream":113.3},{"sid":261,"tier":"more","src":205,"act":206,"f_ours":38.7,"f_dream":7.3},{"sid":280,"tier":"more","src":292,"act":294,"f_ours":57.7,"f_dream":16.6},{"sid":286,"tier":"more","src":23,"act":25,"f_ours":79.3,"f_dream":98.3},{"sid":288,"tier":"more","src":57,"act":59,"f_ours":80.2,"f_dream":30.4,"note":"Donor shown mirrored: the donor episode uses the opposite arm, so its video is horizontally flipped for visual alignment (raw FDCE penalises the mirroring).","flip":true},{"sid":289,"tier":"more","src":33,"act":34,"f_ours":80.3,"f_dream":28.2},{"sid":293,"tier":"more","src":22,"act":20,"f_ours":87.8,"f_dream":61.6},{"sid":299,"tier":"more","src":29,"act":30,"f_ours":115.0,"f_dream":13.2},{"sid":18,"tier":"more","src":50,"act":46,"f_ours":4.6,"f_dream":4.3},{"sid":19,"tier":"more","src":97,"act":96,"f_ours":4.6,"f_dream":5.6},{"sid":20,"tier":"more","src":2,"act":3,"f_ours":4.6,"f_dream":5.9},{"sid":7,"tier":"more","src":223,"act":226,"f_ours":3.0,"f_dream":4.4},{"sid":8,"tier":"more","src":167,"act":168,"f_ours":3.1,"f_dream":6.9},{"sid":12,"tier":"more","src":128,"act":126,"f_ours":3.9,"f_dream":6.0},{"sid":16,"tier":"more","src":169,"act":170,"f_ours":4.3,"f_dream":4.0},{"sid":260,"tier":"more","src":63,"act":64,"f_ours":38.7,"f_dream":47.2},{"sid":265,"tier":"more","src":195,"act":197,"f_ours":43.1,"f_dream":33.1},{"sid":277,"tier":"more","src":267,"act":268,"f_ours":52.5,"f_dream":46.7},{"sid":281,"tier":"more","src":149,"act":150,"f_ours":60.6,"f_dream":4.1},{"sid":282,"tier":"more","src":187,"act":193,"f_ours":63.8,"f_dream":73.2},{"sid":290,"tier":"more","src":27,"act":29,"f_ours":80.4,"f_dream":105.5}],"transfer14b":[{"sid":299,"tier":"featured","src":27,"act":29,"f_ours":153.0,"f_dream":134.1},{"sid":298,"tier":"featured","src":30,"act":28,"f_ours":104.3,"f_dream":89.3},{"sid":252,"tier":"featured","src":74,"act":75,"f_ours":34.2,"f_dream":43.5},{"sid":260,"tier":"featured","src":72,"act":73,"f_ours":36.7,"f_dream":70.2},{"sid":280,"tier":"more","src":78,"act":79,"f_ours":48.5,"f_dream":43.8},{"sid":224,"tier":"more","src":236,"act":239,"f_ours":27.1,"f_dream":21.7},{"sid":223,"tier":"more","src":64,"act":65,"f_ours":25.4,"f_dream":32.9},{"sid":18,"tier":"more","src":240,"act":241,"f_ours":4.6,"f_dream":7.1},{"sid":248,"tier":"more","src":62,"act":63,"f_ours":33.0,"f_dream":38.6},{"sid":283,"tier":"more","src":34,"act":32,"f_ours":50.2,"f_dream":37.8},{"sid":294,"tier":"more","src":22,"act":20,"f_ours":86.7,"f_dream":102.5},{"sid":251,"tier":"more","src":29,"act":30,"f_ours":34.2,"f_dream":11.4},{"sid":286,"tier":"more","src":292,"act":294,"f_ours":54.1,"f_dream":18.0},{"sid":289,"tier":"more","src":23,"act":25,"f_ours":63.0,"f_dream":10.3},{"sid":264,"tier":"more","src":205,"act":206,"f_ours":38.6,"f_dream":59.8},{"sid":288,"tier":"more","src":57,"act":59,"f_ours":59.9,"f_dream":40.2,"note":"Donor shown mirrored: the donor episode uses the opposite arm, so its video is horizontally flipped for visual alignment (raw FDCE penalises the mirroring).","flip":true}],"zero2b":[{"sid":10,"tier":"featured","src":140,"act":141,"f_ours":0.7,"f_dream":21.5},{"sid":1,"tier":"featured","src":193,"act":181,"f_ours":3.9,"f_dream":74.8},{"sid":2,"tier":"featured","src":34,"act":32,"f_ours":1.1,"f_dream":70.8},{"sid":3,"tier":"featured","src":41,"act":40,"f_ours":5.2,"f_dream":58.2},{"sid":4,"tier":"more","src":48,"act":47,"f_ours":5.2,"f_dream":52.0},{"sid":5,"tier":"more","src":130,"act":131,"f_ours":2.2,"f_dream":39.3},{"sid":6,"tier":"more","src":183,"act":180,"f_ours":3.1,"f_dream":32.7},{"sid":7,"tier":"more","src":278,"act":264,"f_ours":2.2,"f_dream":30.1},{"sid":8,"tier":"more","src":270,"act":267,"f_ours":7.5,"f_dream":35.3},{"sid":9,"tier":"more","src":196,"act":198,"f_ours":0.8,"f_dream":23.5},{"sid":11,"tier":"more","src":244,"act":245,"f_ours":2.1,"f_dream":20.4},{"sid":12,"tier":"more","src":224,"act":227,"f_ours":7.8,"f_dream":25.9},{"sid":13,"tier":"more","src":253,"act":254,"f_ours":3.0,"f_dream":19.6},{"sid":14,"tier":"more","src":182,"act":188,"f_ours":6.6,"f_dream":20.8},{"sid":15,"tier":"more","src":79,"act":60,"f_ours":9.3,"f_dream":35.8},{"sid":16,"tier":"more","src":67,"act":68,"f_ours":9.5,"f_dream":24.6},{"sid":17,"tier":"more","src":73,"act":74,"f_ours":10.6,"f_dream":21.2},{"sid":18,"tier":"more","src":180,"act":182,"f_ours":1.3,"f_dream":14.7},{"sid":19,"tier":"more","src":133,"act":132,"f_ours":3.0,"f_dream":13.2},{"sid":20,"tier":"more","src":279,"act":276,"f_ours":0.6,"f_dream":10.7}],"zero14b":[{"sid":16,"tier":"featured","src":182,"act":188,"f_ours":2.5,"f_dream":28.9},{"sid":1,"tier":"featured","src":41,"act":40,"f_ours":1.9,"f_dream":105.5},{"sid":2,"tier":"featured","src":21,"act":22,"f_ours":4.5,"f_dream":81.9},{"sid":3,"tier":"featured","src":49,"act":50,"f_ours":2.5,"f_dream":58.4},{"sid":4,"tier":"more","src":253,"act":254,"f_ours":1.4,"f_dream":48.9},{"sid":5,"tier":"more","src":183,"act":180,"f_ours":3.9,"f_dream":46.4},{"sid":6,"tier":"more","src":224,"act":227,"f_ours":3.1,"f_dream":44.9},{"sid":7,"tier":"more","src":270,"act":267,"f_ours":3.3,"f_dream":44.2},{"sid":8,"tier":"more","src":199,"act":183,"f_ours":2.6,"f_dream":42.6},{"sid":9,"tier":"more","src":65,"act":66,"f_ours":2.4,"f_dream":35.1},{"sid":10,"tier":"more","src":53,"act":52,"f_ours":0.9,"f_dream":32.8},{"sid":11,"tier":"more","src":6,"act":7,"f_ours":0.8,"f_dream":32.3},{"sid":12,"tier":"more","src":34,"act":32,"f_ours":3.0,"f_dream":33.9},{"sid":13,"tier":"more","src":8,"act":9,"f_ours":1.0,"f_dream":31.3},{"sid":14,"tier":"more","src":278,"act":264,"f_ours":1.3,"f_dream":30.6},{"sid":15,"tier":"more","src":79,"act":60,"f_ours":4.4,"f_dream":32.1},{"sid":17,"tier":"more","src":37,"act":38,"f_ours":5.6,"f_dream":29.7},{"sid":18,"tier":"more","src":42,"act":44,"f_ours":3.3,"f_dream":26.9},{"sid":19,"tier":"more","src":196,"act":198,"f_ours":0.7,"f_dream":22.7},{"sid":20,"tier":"more","src":152,"act":153,"f_ours":7.9,"f_dream":29.8}]};
+(function(){
+"use strict";
+var VDIR="static/videos/";
+var BLOCKS=[
+ {el:"g-recon",title:"Robot-action rollouts",doTag:"replay recorded actions",
+  exp:"The recorded robot actions of a real episode are replayed from its first frame &mdash; the rollout should reproduce the ground-truth episode. <b>CD-LAM tracks the commanded motion; DreamDojo drifts off it.</b>",
+  groups:{ "2b":"recon2b","14b":"recon14b"},
+  tiles:[{v:"gt",cls:"ref",lab:"Ground truth &middot; target"},
+         {v:"ours",cls:"ours",lab:"CD-LAM (ours)",fd:"f_ours",good:1},
+         {v:"dream",cls:"base",lab:"DreamDojo",fd:"f_dream"}],
+  note:function(e){return "Episode "+e.src+": recorded actions replayed from its first frame. FDCE &darr; "+e.f_ours+" px (CD-LAM) vs "+e.f_dream+" px (DreamDojo).";}},
+ {el:"g-zero",title:"Zero-action intervention",doTag:"do(u = 0)",
+  exp:"The commanded action is set to <b>zero</b> with everything else held fixed &mdash; the correct rollout is a still frame. The left tile shows what the episode actually did: that motion is exactly what the visual context suggests. <b>DreamDojo replays it anyway &mdash; motion from action-irrelevant confounders; CD-LAM stays put.</b>",
+  groups:{ "2b":"zero2b","14b":"zero14b"},
+  tiles:[{v:"gt",cls:"ref",lab:"Original episode &middot; context"},
+         {v:"ours",cls:"ours",lab:"CD-LAM &middot; do(u=0)",fd:"f_ours",good:1},
+         {v:"dream",cls:"base",lab:"DreamDojo &middot; do(u=0)",fd:"f_dream"}],
+  note:function(e){return "Episode "+e.src+" &mdash; commanded action is zero, so any embodiment motion in the two right tiles is driven by action-irrelevant confounders, not the command. Residual FDCE: "+e.f_ours+" px (CD-LAM) vs "+e.f_dream+" px (DreamDojo).";}},
+ {el:"g-transfer",title:"Target-action transfer",doTag:"do(u = u<sup>tar</sup>)",
+  exp:"Actions recorded in a <b>donor episode</b> are transplanted onto the source scene&rsquo;s first frame &mdash; the rollout should perform the donor&rsquo;s motion in the source scene. FDCE chips are hidden here: the metric is scored against donor keypoints and can penalise legitimate embodiment placement differences, so judge these by eye.",
+  groups:{ "2b":"transfer2b","14b":"transfer14b"},
+  tiles:[{v:"donor",cls:"don",lab:"Action donor &middot; target motion"},
+         {v:"ours",cls:"ours",lab:"CD-LAM (ours)"},
+         {v:"dream",cls:"base",lab:"DreamDojo"}],
+  srcToggle:{v:"gt",cls:"ref",lab:"Source scene &middot; its own original motion"},
+  note:function(e){return "Actions of episode "+e.act+" (donor) transplanted into the scene of episode "+e.src+".";}},
+ {el:"g-latent",title:"Latent-action rollouts",doTag:"observed z<sub>t</sub> &middot; EgoDex &middot; Stage 2",
+  exp:"Stage-2 rollouts conditioned on <b>latent actions z<sub>t</sub></b> encoded from the reference video &mdash; before any robot action based training. The rollout should reproduce the reference episode.",
+  groups:{ "2b":"latent2b","14b":"latent14b"},
+  tiles:[{v:"gt",cls:"ref",lab:"Reference episode &middot; target"},
+         {v:"ours",cls:"ours",lab:"CD-LAM (ours)",fd:"f_ours",good:1},
+         {v:"dream",cls:"base",lab:"DreamDojo",fd:"f_dream"}],
+  note:function(e){return "Episode "+e.src+": latent actions encoded from the reference and replayed. FDCE &darr; "+e.f_ours+" px (CD-LAM) vs "+e.f_dream+" px (DreamDojo).";}}
+];
+
+function el(tag,cls,html){var n=document.createElement(tag); if(cls)n.className=cls; if(html!=null)n.innerHTML=html; return n;}
+function pad(n){return ("00"+n).slice(-3);}
+
+function makeBlock(cfg){
+  var root=document.getElementById(cfg.el); if(!root) return;
+  var sizes=["2b","14b"].filter(function(s){return (MANIFEST[cfg.groups[s]]||[]).length;});
+  if(!sizes.length){root.style.display="none";return;}
+  var st={size:sizes[0],sid:null,more:false,showSrc:false,playing:true,loaded:false};
+  var videos=[],master=null;
+
+  function entries(){return MANIFEST[cfg.groups[st.size]]||[];}
+  function cur(){var es=entries(),i;for(i=0;i<es.length;i++){if(es[i].sid===st.sid)return es[i];}return es[0];}
+  function vsrc(e,v){return VDIR+cfg.groups[st.size]+"/s"+pad(e.sid)+"_"+v+".mp4";}
+
+  function tileList(){var t=cfg.tiles.slice(); if(cfg.srcToggle&&st.showSrc)t.push(cfg.srcToggle); return t;}
+
+  function render(){
+    var e=cur(); st.sid=e.sid;
+    root.innerHTML="";
+    var head=el("div","gal-head");
+    head.appendChild(el("div",null,'<div class="gal-title">'+cfg.title+' <span class="do">'+cfg.doTag+"</span></div>"));
+    var seg=el("div","seg");
+    sizes.forEach(function(s){
+      var b=el("button",s===st.size?"on":null,s.toUpperCase());
+      b.onclick=function(){if(st.size!==s){st.size=s;st.sid=null;st.playing=true;render();}};
+      seg.appendChild(b);
+    });
+    head.appendChild(seg); root.appendChild(head);
+    root.appendChild(el("p","gal-exp",cfg.exp));
+
+    var bar=el("div","gal-toolbar"); bar.appendChild(el("span","lbl","Examples"));
+    var es=entries(),feat=es.filter(function(x){return x.tier==="featured";}),
+        more=es.filter(function(x){return x.tier==="more";});
+    feat.concat(st.more?more:[]).forEach(function(x,i){
+      var c=el("button","chip"+(x.sid===st.sid?" on":""),String(i+1));
+      c.title="sample s"+pad(x.sid)+" · episode "+x.src+" → action "+x.act;
+      c.onclick=function(){if(st.sid!==x.sid){st.sid=x.sid;st.playing=true;render();}};
+      bar.appendChild(c);
+    });
+    if(more.length){
+      var mt=el("button","chip ghost",st.more?"fewer ▴":"+"+more.length+" more ▾");
+      mt.onclick=function(){st.more=!st.more;render();};
+      bar.appendChild(mt);
+    }
+    if(cfg.srcToggle){
+      var stg=el("button","chip"+(st.showSrc?" on":""),(st.showSrc?"−":"+")+" source scene");
+      stg.title="Show the source scene's own episode — the rollouts are not copying it";
+      stg.onclick=function(){st.showSrc=!st.showSrc;render();};
+      bar.appendChild(stg);
+    }
+    root.appendChild(bar);
+
+    var tiles=tileList();
+    var grid=el("div","gal-grid"+(tiles.length===4?" four":""));
+    videos=[];
+    tiles.forEach(function(t){
+      var tile=el("div","tile");
+      var v=document.createElement("video");
+      v.muted=true; v.loop=true; v.playsInline=true; v.setAttribute("playsinline","");
+      v.preload="none"; v.dataset.src=vsrc(e,t.v);
+      tile.appendChild(v);
+      tile.appendChild(el("span","tag "+t.cls,t.lab));
+      if(t.fd&&e[t.fd]!=null) tile.appendChild(el("span","fd"+(t.good?" good":" bad"),"FDCE "+e[t.fd]));
+      grid.appendChild(tile); videos.push(v);
+    });
+    root.appendChild(grid);
+
+    var foot=el("div","gal-foot");
+    var noteHtml=cfg.note(e);
+    if(e.note) noteHtml+=" <b>Note:</b> "+e.note;
+    foot.appendChild(el("div","gal-note",noteHtml));
+    var ctrl=el("div","gal-ctrl");
+    var rb=el("button","pbtn","⟲ Replay");
+    rb.onclick=function(){videos.forEach(function(v){try{v.currentTime=0;}catch(_){}});playAll();};
+    var pb=el("button","pbtn",st.playing?"❚❚ Pause":"▶ Play");
+    pb.onclick=function(){st.playing=!st.playing; pb.innerHTML=st.playing?"❚❚ Pause":"▶ Play"; st.playing?playAll():pauseAll();};
+    ctrl.appendChild(rb); ctrl.appendChild(pb); foot.appendChild(ctrl);
+    root.appendChild(foot);
+
+    master=videos[0];
+    master.addEventListener("timeupdate",function(){
+      for(var i=1;i<videos.length;i++){
+        var f=videos[i];
+        if(f.readyState>2&&Math.abs(f.currentTime-master.currentTime)>0.3) f.currentTime=master.currentTime;
+      }
+    });
+    if(st.loaded) loadAndPlay();
+  }
+
+  function loadAndPlay(){
+    var fresh=false;
+    videos.forEach(function(v){ if(!v.src){v.src=v.dataset.src; v.load(); fresh=true;} });
+    if(!st.playing) return;
+    if(!fresh){ playAll(); return; }
+    var need=videos.length, done=0, fired=false;
+    function go(){ if(fired) return; fired=true;
+      videos.forEach(function(v){ try{v.currentTime=0;}catch(_){}});
+      playAll(); }
+    videos.forEach(function(v){
+      v.addEventListener("loadeddata",function(){ if(++done>=need) go(); },{once:true});
+    });
+    setTimeout(go,2000);
+  }
+  function playAll(){videos.forEach(function(v){var p=v.play(); if(p&&p.catch)p.catch(function(){});});}
+  function pauseAll(){videos.forEach(function(v){v.pause();});}
+
+  var io=new IntersectionObserver(function(en){
+    en.forEach(function(x){
+      if(x.isIntersecting){ st.loaded=true; loadAndPlay(); }
+      else pauseAll();
+    });
+  },{threshold:.15});
+  io.observe(root);
+  render();
+}
+BLOCKS.forEach(makeBlock);
+})();
+</script>
+
+<script>
+(function(){
+"use strict";
+/* lazy auto-playing videos (hero wall, montage, mini demos) with optional sync groups */
+var av=[].slice.call(document.querySelectorAll("video.autovid"));
+var groups={};
+av.forEach(function(v){var g=v.dataset.sync; if(g)(groups[g]=groups[g]||[]).push(v);});
+Object.keys(groups).forEach(function(g){
+  var vs=groups[g],m=vs[0];
+  m.addEventListener("timeupdate",function(){
+    for(var i=1;i<vs.length;i++){var f=vs[i];
+      if(f.readyState>2&&Math.abs(f.currentTime-m.currentTime)>0.3)f.currentTime=m.currentTime;}
+  });
+  vs.forEach(function(f,i){ if(i===0) return;
+    f.addEventListener("loadeddata",function(){ try{f.currentTime=m.currentTime;}catch(_){}} ,{once:true});
+  });
+});
+var io=new IntersectionObserver(function(en){
+  en.forEach(function(x){var v=x.target;
+    if(x.isIntersecting){
+      if(!v.src&&v.dataset.src){v.src=v.dataset.src;v.load();}
+      var p=v.play(); if(p&&p.catch)p.catch(function(){});
+    } else v.pause();
+  });
+},{threshold:.12});
+av.forEach(function(v){io.observe(v);});
+
+/* hero stat count-up (uses animateCount from the base script) */
+setTimeout(function(){
+  try{document.querySelectorAll(".hstat .cnt").forEach(function(c){animateCount(c);});}catch(e){}
+},650);
+
+/* FDCE bar duel: trigger via its own observer (bars use .duel.in) */
+var duel=document.querySelector(".duel");
+if(duel){
+  var dio=new IntersectionObserver(function(en){
+    en.forEach(function(x){ if(x.isIntersecting){x.target.classList.add("in"); dio.unobserve(x.target);} });
+  },{threshold:.35});
+  dio.observe(duel);
+}
+
+/* causal DAG: manual toggle + auto-cycle while visible */
+var dag=document.getElementById("dag"), seg=document.getElementById("dagseg");
+if(dag&&seg){
+  var btns=[].slice.call(seg.querySelectorAll("button")), lastClick=0, visible=false;
+  function setState(s){
+    dag.classList.toggle("clean",s==="clean");
+    btns.forEach(function(b){b.classList.toggle("on",b.dataset.s===s);});
+  }
+  btns.forEach(function(b){b.addEventListener("click",function(){lastClick=Date.now(); setState(b.dataset.s);});});
+  var vio=new IntersectionObserver(function(en){en.forEach(function(x){visible=x.isIntersecting;});},{threshold:.3});
+  vio.observe(dag);
+  var mq=window.matchMedia("(prefers-reduced-motion: reduce)");
+  setInterval(function(){
+    if(!visible||mq.matches||Date.now()-lastClick<12000) return;
+    setState(dag.classList.contains("clean")?"base":"clean");
+  },4200);
+}
+})();
+</script>
+
+</body>
+</html>
