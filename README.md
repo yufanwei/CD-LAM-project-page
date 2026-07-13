@@ -2,7 +2,7 @@
 
 Project page for **CD-LAM: Causally Debiased Latent Action Model for Embodied Action Conditioned World Models** — a research project by **Aether AI** and **UC San Diego**.
 
-**Live page:** https://yufanwei.github.io/CD-LAM-project-page/ · **Code:** https://github.com/yufanwei/CD-LAM · **Model:** https://huggingface.co/yufanwei/CD-LAM · **Paper:** `static/paper/CD-LAM.pdf` (arXiv coming soon)
+**Live page:** https://yufanwei.github.io/CD-LAM-project-page/ · **Code:** https://github.com/yufanwei/CD-LAM · **Model:** https://huggingface.co/yufanwei/CD-LAM · **Paper:** `static/paper/CD-LAM.pdf` · **arXiv:** https://arxiv.org/abs/2607.09185
 
 ## About
 
@@ -39,7 +39,7 @@ Preview locally by opening `index.html` directly (the manifest is inlined, so `f
 @article{wei2026cdlam,
   title   = {Causally Debiased Latent Action Model for Embodied Action Conditioned World Models},
   author  = {Wei, Yufan and Zhou, Kun and Mao, Lingjun and Zhang, Zijun and Xu, Ziming and Xi, Ziqiao and Liang, Shuang and Han, Ruobing and Yan, Yuchen and Wang, Xinyue and Feng, Fan and Huang, Biwei},
-  journal = {Under review},
+  journal = {arXiv preprint arXiv:2607.09185},
   year    = {2026}
 }
 ```
